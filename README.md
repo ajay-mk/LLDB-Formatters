@@ -6,14 +6,12 @@ Heavily insiped from [dprogm/boost-lldb-formatter](https://github.com/dprogm/boo
 
 #### Supported Types
 ```c++
-// Boost
-boost::container::small_vector
-boost::optional
-boost::variant
-
 // Eigen
 Eigen::Matrix
 Eigen::Array
+
+// Boost
+boost::container::small_vector
 ```
 
 #### Installation
