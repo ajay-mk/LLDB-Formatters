@@ -14,19 +14,12 @@ Eigen::Array
 boost::container::small_vector
 ```
 
-#### Installation
-```bash
-
-```
-
 #### Example Usage
-
-##### `Eigen::Matrix`
-```c++
-
+- Git clone the repository to your local machine:
+```sh
+git clone https:://github.com/ajay-mk/LLDB-Formatters.git
 ```
-
-##### `boost::container::small_vector`
-```c++
-
+- Open `~/.lldbinit` and add the following line:
+```sh
+command script import /path/to/LLDB-Formatters/boost_formatter.py
 ```
