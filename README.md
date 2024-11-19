@@ -15,11 +15,11 @@ boost::container::small_vector
 ```
 
 #### Example Usage
-- Git clone the repository to your local machine:
+- Clone the repository to your local machine:
 ```sh
-git clone https:://github.com/ajay-mk/LLDB-Formatters.git
+git clone https://github.com/ajay-mk/LLDB-Formatters.git
 ```
-- Open `~/.lldbinit` and add the following line:
+- Open `~/.lldbinit` and add the following line (or any of the formatters you want to use):
 ```sh
 command script import /path/to/LLDB-Formatters/boost_formatter.py
 ```
