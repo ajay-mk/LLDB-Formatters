@@ -5,6 +5,7 @@ def dereferenced_type(type_ref: lldb.SBType) -> lldb.SBType:
         return type_ref.GetDereferencedType()
     return type_ref
 
+# See https://live.boost.org/doc/libs/1_85_0/doc/html/boost/container/small_vector.html
 class BoostSmallVectorProvider:
     def __init__(self, valobj: lldb.SBValue, dict):
         self.valobj = valobj
