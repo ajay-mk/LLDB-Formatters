@@ -27,3 +27,42 @@ git clone https://github.com/ajay-mk/LLDB-Formatters.git
 command script import /path/to/LLDB-Formatters/boost_formatter.py
 command script import /path/to/LLDB-Formatters/eigen_formatter.py
 ```
+
+#### Example with Eigen Objects
+When debugging C++ code with Eigen objects, the formatter will display matrix and array elements with `[row,col]` indexing:
+
+```cpp
+#include <Eigen/Dense>
+
+int main() {
+    Eigen::MatrixXd matrix(2, 3);
+    matrix << 1.0, 2.0, 3.0,
+              4.0, 5.0, 6.0;
+              
+    Eigen::VectorXd vector(3);
+    vector << 10.0, 20.0, 30.0;
+    
+    // Set breakpoint here
+    return 0;
+}
+```
+
+In LLDB, you'll see:
+```
+(lldb) p matrix
+(Eigen::MatrixXd) matrix = {
+  [0,0] = 1
+  [1,0] = 4
+  [0,1] = 2
+  [1,1] = 5
+  [0,2] = 3
+  [1,2] = 6
+}
+
+(lldb) p vector
+(Eigen::VectorXd) vector = {
+  [0,0] = 10
+  [1,0] = 20
+  [2,0] = 30
+}
+```
