@@ -9,9 +9,12 @@ Inspired from [dprogm/boost-lldb-formatter](https://github.com/dprogm/boost-lldb
 // Boost
 boost::container::small_vector
 
-// Eigen (under development)
+// Eigen
 Eigen::Matrix
 Eigen::Array
+Eigen::MatrixXd, Eigen::MatrixXf, Eigen::MatrixXi
+Eigen::VectorXd, Eigen::VectorXf, Eigen::VectorXi
+Eigen::ArrayXd, Eigen::ArrayXf, Eigen::ArrayXi
 ```
 
 #### Example Usage
@@ -22,4 +25,5 @@ git clone https://github.com/ajay-mk/LLDB-Formatters.git
 - Open `~/.lldbinit` in your home directory and add the following line (or any of the formatters you want to use):
 ```sh
 command script import /path/to/LLDB-Formatters/boost_formatter.py
+command script import /path/to/LLDB-Formatters/eigen_formatter.py
 ```
