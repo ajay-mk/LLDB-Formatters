@@ -1,0 +1,25 @@
+name: Integration Tests
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lldb-integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lldb libboost-all-dev g++
+
+      - name: Build and run integration tests
+        run: |
+          cd tests
+          chmod +x run_integration_tests.sh
+          ./run_integration_tests.sh
