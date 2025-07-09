@@ -1,0 +1,5 @@
+command script import ../boost_formatter.py
+break set --name main
+run
+frame variable vec
+quit

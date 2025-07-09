@@ -1,14 +1,16 @@
 import lldb
 
+
 def dereferenced_type(type_ref: lldb.SBType) -> lldb.SBType:
     """Helper function to get the dereferenced type if it's a reference."""
     if type_ref.IsReferenceType():
         return type_ref.GetDereferencedType()
     return type_ref
 
+
 class EigenMatrixProvider:
     """LLDB formatter for Eigen::Matrix objects."""
-    
+
     def __init__(self, valobj: lldb.SBValue, dict):
         self.valobj = valobj
         self.rows = 0
@@ -32,9 +34,10 @@ class EigenMatrixProvider:
 
     def get_child_at_index(self, index):
         """Return the matrix element at the given linear index."""
-        if not self.data_ptr or not self.data_ptr.IsValid() or index >= self.num_children():
+        if (not self.data_ptr or not self.data_ptr.IsValid() or
+                index >= self.num_children()):
             return None
-            
+
         try:
             # Calculate row and column from linear index
             # Eigen uses column-major storage by default, but can be row-major
@@ -46,33 +49,35 @@ class EigenMatrixProvider:
                 # Column-major: elements stored column by column
                 row = index % self.rows
                 col = index // self.rows
-            
+
             # Create child at the calculated offset
             element_size = self.scalar_type.GetByteSize()
             offset = index * element_size
             child_name = f'[{row},{col}]'
-            
-            return self.data_ptr.CreateChildAtOffset(child_name, offset, self.scalar_type)
-            
+
+            return self.data_ptr.CreateChildAtOffset(
+                child_name, offset, self.scalar_type)
+
         except Exception:
             return None
 
     def update(self):
-        """Called when the value might have changed. Parse the Eigen object structure."""
+        """Called when the value might have changed.
+        Parse the Eigen object structure."""
         try:
             # Get the scalar type from template parameters
             this_type = dereferenced_type(self.valobj.GetType())
             self.scalar_type = this_type.GetTemplateArgumentType(0)
-            
+
             # Determine storage order from template parameters
             self.is_row_major = self._get_storage_order()
-            
+
             # Find the data pointer
             self.data_ptr = self._find_data_pointer()
-            
+
             # Get dimensions
             self.rows, self.cols = self._get_dimensions()
-            
+
         except Exception:
             self.rows = 0
             self.cols = 0
@@ -93,7 +98,7 @@ class EigenMatrixProvider:
             ['m_data'],
             ['data'],
         ]
-        
+
         for path in candidates:
             current = self.valobj
             for member_name in path:
@@ -102,37 +107,39 @@ class EigenMatrixProvider:
                     break
             if current.IsValid():
                 return current
-                
+
         return None
 
     def _get_storage_order(self):
         """Determine if the matrix uses row-major or column-major storage."""
         try:
             this_type = dereferenced_type(self.valobj.GetType())
-            # Eigen::Matrix template: Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>
+            # Eigen::Matrix template:
+            # Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>
             # Options parameter (index 3) contains storage order flags
             # RowMajor = 1, ColMajor = 0 (default)
-            
+
             # Check if we have enough template arguments
             num_template_args = this_type.GetNumberOfTemplateArguments()
             if num_template_args >= 4:
                 options_type = this_type.GetTemplateArgumentType(3)
                 if options_type.IsValid():
-                    # Try to get the integer value of the Options template parameter
-                    # This is a compile-time constant, so we need to check if it's RowMajor (1)
+                    # Try to get the integer value of the Options template
+                    # parameter. This is a compile-time constant, so we need
+                    # to check if it's RowMajor (1)
                     options_name = str(options_type.GetName())
                     # Check for RowMajor in the type name or template argument
                     if 'RowMajor' in options_name or '1' in options_name:
                         return True
-            
+
             # Also check the full type name for RowMajor indication
             type_name = str(this_type.GetName())
             if 'RowMajor' in type_name:
                 return True
-                
+
         except Exception:
             pass
-        
+
         # Default to column-major if we can't determine otherwise
         return False
 
@@ -140,7 +147,7 @@ class EigenMatrixProvider:
         """Get the matrix dimensions."""
         rows = 1
         cols = 1
-        
+
         # Try to get dimensions from various possible member locations
         dimension_candidates = [
             # Common patterns in Eigen
@@ -149,7 +156,7 @@ class EigenMatrixProvider:
             (['rows'], ['cols']),
             (['m_storage', 'rows'], ['m_storage', 'cols']),
         ]
-        
+
         for row_path, col_path in dimension_candidates:
             # Try to get rows
             current = self.valobj
@@ -164,28 +171,30 @@ class EigenMatrixProvider:
                         # Now try to get cols
                         current = self.valobj
                         for member_name in col_path:
-                            current = current.GetChildMemberWithName(member_name)
+                            current = current.GetChildMemberWithName(
+                                member_name)
                             if not current.IsValid():
                                 break
                         if current.IsValid():
                             cols = current.GetValueAsUnsigned()
                             if cols > 0:
                                 return rows, cols
-                except:
+                except Exception:
                     continue
-        
+
         # Fallback: try to infer from type name or total size
         return self._infer_dimensions()
 
     def _infer_dimensions(self):
-        """Fallback method to infer dimensions when direct member access fails."""
+        """Fallback method to infer dimensions when direct member access
+        fails."""
         # Try to get size information
         size_candidates = [
             ['m_storage', 'm_size'],
             ['m_size'],
             ['size'],
         ]
-        
+
         total_size = 0
         for path in size_candidates:
             current = self.valobj
@@ -198,9 +207,9 @@ class EigenMatrixProvider:
                     total_size = current.GetValueAsUnsigned()
                     if total_size > 0:
                         break
-                except:
+                except Exception:
                     continue
-        
+
         if total_size > 0:
             # For vectors, assume it's either Nx1 or 1xN
             # We can check the type name to see if it's a Vector type
@@ -216,49 +225,73 @@ class EigenMatrixProvider:
                 else:
                     # Fallback to treating as vector
                     return total_size, 1
-        
+
         # Ultimate fallback
         return 1, 1
 
+
 class EigenArrayProvider:
     """LLDB formatter for Eigen::Array objects.
-    
+
     Arrays in Eigen have the same structure as matrices, so we can reuse
     the same implementation.
     """
-    
+
     def __init__(self, valobj: lldb.SBValue, dict):
         # Delegate to the matrix provider since the structure is the same
         self.matrix_provider = EigenMatrixProvider(valobj, dict)
-        
+
     def num_children(self) -> int:
         return self.matrix_provider.num_children()
-        
+
     def has_children(self) -> bool:
         return self.matrix_provider.has_children()
-        
+
     def get_child_index(self, name):
         return self.matrix_provider.get_child_index(name)
-        
+
     def get_child_at_index(self, index):
         return self.matrix_provider.get_child_at_index(index)
-        
+
     def update(self):
         self.matrix_provider.update()
+
 
 def __lldb_init_module(debugger, internal_dict):
     """Register the formatters with LLDB."""
     # Register Eigen::Matrix formatter with more specific patterns
-    debugger.HandleCommand('type synthetic add -l eigen_formatter.EigenMatrixProvider -x "^Eigen::Matrix<.+>$"')
-    debugger.HandleCommand('type synthetic add -l eigen_formatter.EigenMatrixProvider -x "^Eigen::MatrixXd$"')
-    debugger.HandleCommand('type synthetic add -l eigen_formatter.EigenMatrixProvider -x "^Eigen::MatrixXf$"')
-    debugger.HandleCommand('type synthetic add -l eigen_formatter.EigenMatrixProvider -x "^Eigen::MatrixXi$"')
-    debugger.HandleCommand('type synthetic add -l eigen_formatter.EigenMatrixProvider -x "^Eigen::VectorXd$"')
-    debugger.HandleCommand('type synthetic add -l eigen_formatter.EigenMatrixProvider -x "^Eigen::VectorXf$"')
-    debugger.HandleCommand('type synthetic add -l eigen_formatter.EigenMatrixProvider -x "^Eigen::VectorXi$"')
-    
+    cmd1 = ('type synthetic add -l eigen_formatter.EigenMatrixProvider '
+            '-x "^Eigen::Matrix<.+>$"')
+    debugger.HandleCommand(cmd1)
+    cmd2 = ('type synthetic add -l eigen_formatter.EigenMatrixProvider '
+            '-x "^Eigen::MatrixXd$"')
+    debugger.HandleCommand(cmd2)
+    cmd3 = ('type synthetic add -l eigen_formatter.EigenMatrixProvider '
+            '-x "^Eigen::MatrixXf$"')
+    debugger.HandleCommand(cmd3)
+    cmd4 = ('type synthetic add -l eigen_formatter.EigenMatrixProvider '
+            '-x "^Eigen::MatrixXi$"')
+    debugger.HandleCommand(cmd4)
+    cmd5 = ('type synthetic add -l eigen_formatter.EigenMatrixProvider '
+            '-x "^Eigen::VectorXd$"')
+    debugger.HandleCommand(cmd5)
+    cmd6 = ('type synthetic add -l eigen_formatter.EigenMatrixProvider '
+            '-x "^Eigen::VectorXf$"')
+    debugger.HandleCommand(cmd6)
+    cmd7 = ('type synthetic add -l eigen_formatter.EigenMatrixProvider '
+            '-x "^Eigen::VectorXi$"')
+    debugger.HandleCommand(cmd7)
+
     # Register Eigen::Array formatter
-    debugger.HandleCommand('type synthetic add -l eigen_formatter.EigenArrayProvider -x "^Eigen::Array<.+>$"')
-    debugger.HandleCommand('type synthetic add -l eigen_formatter.EigenArrayProvider -x "^Eigen::ArrayXd$"')
-    debugger.HandleCommand('type synthetic add -l eigen_formatter.EigenArrayProvider -x "^Eigen::ArrayXf$"')
-    debugger.HandleCommand('type synthetic add -l eigen_formatter.EigenArrayProvider -x "^Eigen::ArrayXi$"')
+    cmd8 = ('type synthetic add -l eigen_formatter.EigenArrayProvider '
+            '-x "^Eigen::Array<.+>$"')
+    debugger.HandleCommand(cmd8)
+    cmd9 = ('type synthetic add -l eigen_formatter.EigenArrayProvider '
+            '-x "^Eigen::ArrayXd$"')
+    debugger.HandleCommand(cmd9)
+    cmd10 = ('type synthetic add -l eigen_formatter.EigenArrayProvider '
+             '-x "^Eigen::ArrayXf$"')
+    debugger.HandleCommand(cmd10)
+    cmd11 = ('type synthetic add -l eigen_formatter.EigenArrayProvider '
+             '-x "^Eigen::ArrayXi$"')
+    debugger.HandleCommand(cmd11)

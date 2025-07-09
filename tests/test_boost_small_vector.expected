@@ -1,0 +1,6 @@
+(lldb) frame variable vec
+(boost::container::small_vector<int, 4>) vec = {
+  [0] = 10
+  [1] = 20
+  [2] = 30
+}

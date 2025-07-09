@@ -1,0 +1,50 @@
+name: Integration Tests
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install flake8
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+
+      - name: Lint with flake8
+        run: |
+          flake8 **/*.py --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 **/*.py --count --exit-zero --max-complexity=10 --max-line-length=79 --statistics
+
+      - name: Test syntax and structure
+        run: |
+          python tests/test_imports.py
+
+  lldb-integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lldb libboost-all-dev g++
+
+      - name: Build and run integration tests
+        run: |
+          cd tests
+          chmod +x run_integration_tests.sh
+          ./run_integration_tests.sh
