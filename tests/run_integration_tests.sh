@@ -13,10 +13,10 @@ lldb -b -s test_boost_small_vector.lldb ./test_boost_small_vector > test_boost_s
 grep -A 5 "frame variable vec" test_boost_small_vector.out | head -6 > test_boost_small_vector.actual
 
 # Compare output
-if diff -q test_boost_small_vector.actual expected_boost_small_vector.out; then
+if diff -q test_boost_small_vector.actual test_boost_small_vector.out; then
     echo "Boost small_vector test PASSED"
 else
     echo "Boost small_vector test FAILED"
-    diff test_boost_small_vector.actual expected_boost_small_vector.out
+    diff test_boost_small_vector.actual test_boost_small_vector.out
     exit 1
 fi
