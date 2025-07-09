@@ -4,6 +4,8 @@ This repository contains a collection of LLDB formatters for C++ types. The form
 
 Inspired from [dprogm/boost-lldb-formatter](https://github.com/dprogm/boost-lldb-formatter) and [tehrengruber/LLDB-Eigen-Data-Formatter](https://github.com/tehrengruber/LLDB-Eigen-Data-Formatter).
 
+**Disclaimer: ** Some parts of this repository is written with help from LLMs through GitHub Copilot.
+
 #### Supported Types
 ```c++
 // Boost
