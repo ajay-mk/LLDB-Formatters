@@ -28,6 +28,33 @@ command script import /path/to/LLDB-Formatters/boost_formatter.py
 command script import /path/to/LLDB-Formatters/eigen_formatter.py
 ```
 
+#### Example with Boost Objects
+When debugging C++ code with Boost container objects, the formatter will display elements with proper indexing:
+
+```cpp
+#include <boost/container/small_vector.hpp>
+
+int main() {
+    boost::container::small_vector<int, 4> vec;
+    vec.push_back(10);
+    vec.push_back(20);
+    vec.push_back(30);
+    
+    // Set breakpoint here
+    return 0;
+}
+```
+
+In LLDB, you'll see:
+```
+(lldb) p vec
+(boost::container::small_vector<int, 4>) vec = {
+  [0] = 10
+  [1] = 20
+  [2] = 30
+}
+```
+
 #### Example with Eigen Objects
 When debugging C++ code with Eigen objects, the formatter will display matrix and array elements with `[row,col]` indexing:
 

@@ -15,6 +15,7 @@ class EigenMatrixProvider:
         self.cols = 0
         self.data_ptr = None
         self.scalar_type = None
+        self.is_row_major = False  # Track storage order
         self.update()
 
     def num_children(self) -> int:
@@ -36,9 +37,15 @@ class EigenMatrixProvider:
             
         try:
             # Calculate row and column from linear index
-            # Eigen uses column-major storage by default
-            row = index % self.rows
-            col = index // self.rows
+            # Eigen uses column-major storage by default, but can be row-major
+            if self.is_row_major:
+                # Row-major: elements stored row by row
+                row = index // self.cols
+                col = index % self.cols
+            else:
+                # Column-major: elements stored column by column
+                row = index % self.rows
+                col = index // self.rows
             
             # Create child at the calculated offset
             element_size = self.scalar_type.GetByteSize()
@@ -57,6 +64,9 @@ class EigenMatrixProvider:
             this_type = dereferenced_type(self.valobj.GetType())
             self.scalar_type = this_type.GetTemplateArgumentType(0)
             
+            # Determine storage order from template parameters
+            self.is_row_major = self._get_storage_order()
+            
             # Find the data pointer
             self.data_ptr = self._find_data_pointer()
             
@@ -68,6 +78,7 @@ class EigenMatrixProvider:
             self.cols = 0
             self.data_ptr = None
             self.scalar_type = None
+            self.is_row_major = False
 
     def _find_data_pointer(self):
         """Find the data pointer in the Eigen object structure."""
@@ -93,6 +104,37 @@ class EigenMatrixProvider:
                 return current
                 
         return None
+
+    def _get_storage_order(self):
+        """Determine if the matrix uses row-major or column-major storage."""
+        try:
+            this_type = dereferenced_type(self.valobj.GetType())
+            # Eigen::Matrix template: Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>
+            # Options parameter (index 3) contains storage order flags
+            # RowMajor = 1, ColMajor = 0 (default)
+            
+            # Check if we have enough template arguments
+            num_template_args = this_type.GetNumberOfTemplateArguments()
+            if num_template_args >= 4:
+                options_type = this_type.GetTemplateArgumentType(3)
+                if options_type.IsValid():
+                    # Try to get the integer value of the Options template parameter
+                    # This is a compile-time constant, so we need to check if it's RowMajor (1)
+                    options_name = str(options_type.GetName())
+                    # Check for RowMajor in the type name or template argument
+                    if 'RowMajor' in options_name or '1' in options_name:
+                        return True
+            
+            # Also check the full type name for RowMajor indication
+            type_name = str(this_type.GetName())
+            if 'RowMajor' in type_name:
+                return True
+                
+        except Exception:
+            pass
+        
+        # Default to column-major if we can't determine otherwise
+        return False
 
     def _get_dimensions(self):
         """Get the matrix dimensions."""
