@@ -60,7 +60,10 @@ class BoostContainerMapProvider:
                 # Try alternative member names
                 value = node_ptr.GetChildMemberWithName('m_data')
 
-            return value.CreateValueFromExpression(f'[{index}]', f'*({self.value_type_str}*)0x{node_ptr.GetValueAsUnsigned():x}')
+            if not value.IsValid() or not self.value_type_str:
+                return None
+
+            return value.CreateValueFromExpression(f'[{index}]', f'*({self.value_type_str}*)0x{value.GetLoadAddress():x}')
 
         return None
 
@@ -167,11 +170,11 @@ class BoostUnorderedMapProvider:
             value = node_ptr.GetChildMemberWithName('value_')
             if not value.IsValid():
                 value = node_ptr.GetChildMemberWithName('m_value')
-            if not value.IsValid():
-                # The value might be stored directly in the node after the hash
-                value = node_ptr
 
-            return value.CreateValueFromExpression(f'[{index}]', f'({self.value_type_str}){{*({self.value_type_str}*)0x{value.GetLoadAddress():x}}}')
+            if not value.IsValid() or not self.value_type_str:
+                return None
+
+            return value.CreateValueFromExpression(f'[{index}]', f'*({self.value_type_str}*)0x{value.GetLoadAddress():x}')
 
         return None
 
@@ -202,8 +205,11 @@ class BoostUnorderedMapProvider:
 
         bucket_count_val = bucket_count.GetValueAsUnsigned()
 
-        # Iterate through buckets and collect nodes
-        for i in range(min(bucket_count_val, 10000)):  # Limit to prevent infinite loops
+        # Iterate through buckets and collect nodes, exiting early once all elements are found
+        for i in range(bucket_count_val):
+            if len(self.node_list) >= self.size:
+                return
+
             bucket = buckets.GetChildAtIndex(i)
             if bucket.IsValid():
                 # Get the first node in the bucket
