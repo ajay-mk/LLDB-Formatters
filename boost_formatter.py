@@ -86,17 +86,19 @@ class BoostContainerMapProvider:
                 # Get the parent of header, which is the root of the tree
                 root = header.GetChildMemberWithName('m_parent')
                 if root.IsValid() and root.GetValueAsUnsigned() != 0:
-                    self._traverse_tree(root)
+                    self._traverse_tree(root, set())
 
-    def _traverse_tree(self, node):
+    def _traverse_tree(self, node, visited):
         """In-order traversal of the red-black tree"""
-        if node.GetValueAsUnsigned() == 0:
+        node_addr = node.GetValueAsUnsigned()
+        if node_addr == 0 or node_addr in visited:
             return
+        visited.add(node_addr)
 
         # Traverse left subtree
         left = node.GetChildMemberWithName('m_left')
         if left.IsValid() and left.GetValueAsUnsigned() != 0:
-            self._traverse_tree(left)
+            self._traverse_tree(left, visited)
 
         # Add current node
         self.node_list.append(node)
@@ -104,7 +106,7 @@ class BoostContainerMapProvider:
         # Traverse right subtree
         right = node.GetChildMemberWithName('m_right')
         if right.IsValid() and right.GetValueAsUnsigned() != 0:
-            self._traverse_tree(right)
+            self._traverse_tree(right, visited)
 
     def update(self):
         self.size = 0
